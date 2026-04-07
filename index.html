@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shtëpi.al — Нерухомість Албанії</title>
+<meta name="description" content="Пошук нерухомості в Албанії — квартири, будинки, вілли на березі Адріатичного моря" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', 'Segoe UI', sans-serif; background: #f6f5fb; color: #1a1a2e; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+input, select, button { font-family: inherit; }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f0eff5; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+/* Animations */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes countUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.fade-up { animation: fadeUp 0.7s cubic-bezier(.4,0,.2,1) both; }
+.fade-in { animation: fadeIn 0.6s ease both; }
+.scale-in { animation: scaleIn 0.5s cubic-bezier(.4,0,.2,1) both; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-stats { gap: 24px !important; flex-wrap: wrap !important; }
+  .search-filters { flex-direction: column !important; }
+  .search-filters > div { min-width: 100% !important; }
+  .header-actions { gap: 8px !important; }
+  .header-actions .btn-login, .header-actions .btn-add { font-size: 12px !important; padding: 7px 12px !important; }
+  .grid-results { grid-template-columns: 1fr !important; }
+  .grid-cities { grid-template-columns: repeat(2, 1fr) !important; }
+  .grid-about { grid-template-columns: 1fr !important; }
+  .footer-inner { flex-direction: column !important; gap: 32px !important; }
+}
+@media (max-width: 480px) {
+  .grid-cities { grid-template-columns: 1fr !important; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useMemo } = React;
+
+// ─── i18n ────────────────────────────────────────────────────────
+const T = {
+  uk: {
+    brand: "Shtëpi.al", tagline: "Вся нерухомість Албанії",
+    buy: "Купити", rent: "Орендувати", daily: "Подобово",
+    search: "Знайти", reset: "Скинути",
+    city: "Місто", allCities: "Всі міста",
+    type: "Тип нерухомості", allTypes: "Всі типи",
+    apartment: "Квартира", house: "Будинок", villa: "Вілла", land: "Ділянка", commercial: "Комерційна",
+    priceFrom: "Ціна від", priceTo: "Ціна до",
+    rooms: "Кімнати", any: "Будь-які", area: "Площа від м²",
+    results: "Результати пошуку",
+    noResults: "Нічого не знайдено. Спробуйте змінити фільтри.",
+    featured: "Рекомендовані", verified: "Перевірено", newBuild: "Новобудова", priceReduced: "Знижка ціни",
+    perMonth: "/місяць", perDay: "/добу", m2: "м²", roomsShort: "кімн.", floor: "поверх",
+    addListing: "Додати оголошення", login: "Увійти",
+    aboutTitle: "Чому Shtëpi.al?",
+    about1title: "Перевірені оголошення", about1desc: "Кожне оголошення проходить модерацію та верифікацію",
+    about2title: "Вся Албанія", about2desc: "Нерухомість у всіх містах та регіонах країни",
+    about3title: "4 мови", about3desc: "Зручний інтерфейс українською, англійською, албанською та італійською",
+    about4title: "Без посередників", about4desc: "Прямий зв'язок з власниками нерухомості",
+    footerDesc: "Сервіс пошуку нерухомості в Албанії для українців та іноземців.",
+    footerNav: "Навігація", footerContact: "Контакти", footerRights: "Всі права захищені.",
+    heroTitle: "Знайдіть свій дім в Албанії", heroSub: "Квартири, будинки та вілли на березі Адріатичного моря",
+    statsListings: "Оголошень", statsCities: "Міст", statsAgents: "Агентів", statsUsers: "Користувачів",
+    details: "Детальніше", popularCities: "Популярні міста",
+    call: "Зателефонувати", favorite: "В обране",
+  },
+  en: {
+    brand: "Shtëpi.al", tagline: "All Real Estate in Albania",
+    buy: "Buy", rent: "Rent", daily: "Daily",
+    search: "Search", reset: "Reset",
+    city: "City", allCities: "All cities",
+    type: "Property type", allTypes: "All types",
+    apartment: "Apartment", house: "House", villa: "Villa", land: "Land", commercial: "Commercial",
+    priceFrom: "Price from", priceTo: "Price to",
+    rooms: "Rooms", any: "Any", area: "Area from m²",
+    results: "Search Results",
+    noResults: "Nothing found. Try adjusting your filters.",
+    featured: "Featured", verified: "Verified", newBuild: "New Build", priceReduced: "Price Reduced",
+    perMonth: "/mo", perDay: "/day", m2: "m²", roomsShort: "rooms", floor: "floor",
+    addListing: "Add Listing", login: "Sign In",
+    aboutTitle: "Why Shtëpi.al?",
+    about1title: "Verified Listings", about1desc: "Every listing is moderated and verified",
+    about2title: "All of Albania", about2desc: "Properties in every city and region",
+    about3title: "4 Languages", about3desc: "Interface in Ukrainian, English, Albanian & Italian",
+    about4title: "No Middlemen", about4desc: "Direct contact with property owners",
+    footerDesc: "Real estate search service in Albania for Ukrainians and foreigners.",
+    footerNav: "Navigation", footerContact: "Contacts", footerRights: "All rights reserved.",
+    heroTitle: "Find Your Home in Albania", heroSub: "Apartments, houses & villas on the Adriatic coast",
+    statsListings: "Listings", statsCities: "Cities", statsAgents: "Agents", statsUsers: "Users",
+    details: "Details", popularCities: "Popular Cities",
+    call: "Call", favorite: "Favorite",
+  },
+  sq: {
+    brand: "Shtëpi.al", tagline: "Të gjitha pasuritë e paluajtshme në Shqipëri",
+    buy: "Bli", rent: "Qira", daily: "Ditore",
+    search: "Kërko", reset: "Pastro",
+    city: "Qyteti", allCities: "Të gjitha qytetet",
+    type: "Lloji i pronës", allTypes: "Të gjitha llojet",
+    apartment: "Apartament", house: "Shtëpi", villa: "Vilë", land: "Tokë", commercial: "Komerciale",
+    priceFrom: "Çmimi nga", priceTo: "Çmimi deri",
+    rooms: "Dhoma", any: "Të gjitha", area: "Sipërfaqja nga m²",
+    results: "Rezultatet e kërkimit",
+    noResults: "Nuk u gjet asgjë. Provoni të ndryshoni filtrat.",
+    featured: "Të rekomanduara", verified: "E verifikuar", newBuild: "Ndërtim i ri", priceReduced: "Çmim i ulur",
+    perMonth: "/muaj", perDay: "/ditë", m2: "m²", roomsShort: "dhoma", floor: "kat",
+    addListing: "Shto njoftim", login: "Hyr",
+    aboutTitle: "Pse Shtëpi.al?",
+    about1title: "Njoftime të verifikuara", about1desc: "Çdo njoftim moderohet dhe verifikohet",
+    about2title: "E gjithë Shqipëria", about2desc: "Prona në çdo qytet dhe rajon",
+    about3title: "4 Gjuhë", about3desc: "Ndërfaqe në ukrainisht, anglisht, shqip dhe italisht",
+    about4title: "Pa ndërmjetës", about4desc: "Kontakt direkt me pronarët",
+    footerDesc: "Shërbim kërkimi për pasuri të paluajtshme në Shqipëri.",
+    footerNav: "Navigimi", footerContact: "Kontaktet", footerRights: "Të gjitha të drejtat e rezervuara.",
+    heroTitle: "Gjeni shtëpinë tuaj në Shqipëri", heroSub: "Apartamente, shtëpi dhe vila në bregdetin e Adriatikut",
+    statsListings: "Njoftime", statsCities: "Qytete", statsAgents: "Agjentë", statsUsers: "Përdorues",
+    details: "Detaje", popularCities: "Qytetet popullore",
+    call: "Telefono", favorite: "Preferat",
+  },
+  it: {
+    brand: "Shtëpi.al", tagline: "Tutti gli immobili in Albania",
+    buy: "Comprare", rent: "Affittare", daily: "Giornaliero",
+    search: "Cerca", reset: "Resetta",
+    city: "Città", allCities: "Tutte le città",
+    type: "Tipo di immobile", allTypes: "Tutti i tipi",
+    apartment: "Appartamento", house: "Casa", villa: "Villa", land: "Terreno", commercial: "Commerciale",
+    priceFrom: "Prezzo da", priceTo: "Prezzo a",
+    rooms: "Stanze", any: "Qualsiasi", area: "Superficie da m²",
+    results: "Risultati di ricerca",
+    noResults: "Nessun risultato. Prova a modificare i filtri.",
+    featured: "In evidenza", verified: "Verificato", newBuild: "Nuova costruzione", priceReduced: "Prezzo ridotto",
+    perMonth: "/mese", perDay: "/giorno", m2: "m²", roomsShort: "stanze", floor: "piano",
+    addListing: "Aggiungi annuncio", login: "Accedi",
+    aboutTitle: "Perché Shtëpi.al?",
+    about1title: "Annunci verificati", about1desc: "Ogni annuncio è moderato e verificato",
+    about2title: "Tutta l'Albania", about2desc: "Immobili in ogni città e regione",
+    about3title: "4 Lingue", about3desc: "Interfaccia in ucraino, inglese, albanese e italiano",
+    about4title: "Senza intermediari", about4desc: "Contatto diretto con i proprietari",
+    footerDesc: "Servizio di ricerca immobiliare in Albania per ucraini e stranieri.",
+    footerNav: "Navigazione", footerContact: "Contatti", footerRights: "Tutti i diritti riservati.",
+    heroTitle: "Trova la tua casa in Albania", heroSub: "Appartamenti, case e ville sulla costa adriatica",
+    statsListings: "Annunci", statsCities: "Città", statsAgents: "Agenti", statsUsers: "Utenti",
+    details: "Dettagli", popularCities: "Città popolari",
+    call: "Chiama", favorite: "Preferiti",
+  },
+};
+
+const LANG_LABELS = { uk: "🇺🇦 UA", en: "🇬🇧 EN", sq: "🇦🇱 SQ", it: "🇮🇹 IT" };
+
+// ─── Data ──────────────────────────────────────────────────────
+const CITIES = ["Tiranë","Durrës","Vlorë","Sarandë","Shkodër","Berat","Gjirokastër","Korçë","Elbasan","Fier"];
+
+const PHOTOS = [
+  "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1570129477492-45c003edd2be?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1583608205776-bfd35f0d9f83?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1613977257363-707ba9348227?w=600&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1599809275671-b5942cabc7a2?w=600&h=400&fit=crop",
+];
+
+const CITY_PHOTOS = [
+  "https://images.unsplash.com/photo-1600623047481-37c0e44e1c6f?w=400&h=260&fit=crop",
+  "https://images.unsplash.com/photo-1592486058517-fc80e4bd5aa5?w=400&h=260&fit=crop",
+  "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=400&h=260&fit=crop",
+  "https://images.unsplash.com/photo-1586500036706-41963de24d8b?w=400&h=260&fit=crop",
+  "https://images.unsplash.com/photo-1580746738099-78d6833b3a01?w=400&h=260&fit=crop",
+  "https://images.unsplash.com/photo-1590073242678-70ee3fc28e8e?w=400&h=260&fit=crop",
+];
+
+const STREETS = [
+  "Rruga Myslym Shyri","Bulevardi Dëshmorët e Kombit","Rruga Ismail Qemali",
+  "Rruga Abdyl Frashëri","Rruga Barrikadave","Bulevardi Zogu I",
+  "Rruga Skënderbej","Rruga Kavajës","Rruga Elbasanit","Rruga Dritan Hoxha",
+  "Rruga Taulantia","Rruga Epidamn",
+];
+
+function generateListings() {
+  const types = ["apartment","house","villa","land","commercial"];
+  const tags = ["verified","newBuild","priceReduced",""];
+  const listings = [];
+  for (let i = 0; i < 24; i++) {
+    const opType = i < 16 ? "buy" : i < 22 ? "rent" : "daily";
+    const propType = types[i % types.length];
+    const isLand = propType === "land";
+    const basePrice = { villa:180000, house:95000, land:35000, commercial:120000, apartment:55000 }[propType];
+    const price = opType === "buy" ? basePrice + Math.floor(Math.random()*80000)
+      : opType === "rent" ? 300 + Math.floor(Math.random()*700)
+      : 30 + Math.floor(Math.random()*90);
+    listings.push({
+      id: i+1, photo: PHOTOS[i % PHOTOS.length], city: CITIES[i % CITIES.length],
+      street: STREETS[i % STREETS.length], type: propType, opType, price, currency: "€",
+      rooms: isLand ? 0 : 1+Math.floor(Math.random()*4),
+      area: isLand ? 200+Math.floor(Math.random()*800) : 40+Math.floor(Math.random()*160),
+      floor: isLand ? 0 : 1+Math.floor(Math.random()*9),
+      totalFloors: isLand ? 0 : 3+Math.floor(Math.random()*9),
+      tag: tags[i % tags.length],
+    });
+  }
+  return listings;
+}
+const ALL_LISTINGS = generateListings();
+
+// ─── Components ────────────────────────────────────────────────
+
+function LangSwitcher({ lang, setLang }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={() => setOpen(!open)} style={{
+        padding: "8px 14px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8,
+        background: "rgba(255,255,255,0.07)", color: "#fff", cursor: "pointer", fontSize: 13,
+        fontWeight: 600, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6,
+      }}>
+        {LANG_LABELS[lang]}
+        <span style={{ fontSize: 10, opacity: 0.6 }}>▼</span>
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", top: "110%", right: 0, background: "#fff", borderRadius: 10,
+          boxShadow: "0 12px 40px rgba(0,0,0,0.15)", overflow: "hidden", zIndex: 200,
+          animation: "slideDown 0.2s ease", minWidth: 130,
+        }}>
+          {Object.entries(LANG_LABELS).map(([k, v]) => (
+            <button key={k} onClick={() => { setLang(k); setOpen(false); }} style={{
+              display: "block", width: "100%", padding: "10px 16px", border: "none",
+              background: lang === k ? "#f6f5fb" : "#fff", color: "#1a1a2e", cursor: "pointer",
+              fontSize: 14, fontWeight: lang === k ? 700 : 500, fontFamily: "inherit", textAlign: "left",
+            }}>{v}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Header({ lang, setLang, t }) {
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const h = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", h); return () => window.removeEventListener("scroll", h);
+  }, []);
+  return (
+    <header style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      background: scrolled ? "rgba(14,14,30,0.97)" : "transparent",
+      backdropFilter: scrolled ? "blur(20px)" : "none",
+      transition: "all .4s cubic-bezier(.4,0,.2,1)",
+      borderBottom: scrolled ? "1px solid rgba(255,255,255,0.06)" : "none",
+    }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+          <div style={{
+            width: 42, height: 42, borderRadius: 11,
+            background: "linear-gradient(135deg, #e8543e 0%, #c0392b 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 22, fontWeight: 800, color: "#fff", fontFamily: "'Playfair Display', serif",
+            boxShadow: "0 4px 16px rgba(232,84,62,0.3)",
+          }}>S</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 19, color: "#fff", fontFamily: "'Playfair Display', serif", letterSpacing: "-0.02em" }}>{t.brand}</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", letterSpacing: "0.03em", marginTop: -1 }}>{t.tagline}</div>
+          </div>
+        </div>
+        <div className="header-actions" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <LangSwitcher lang={lang} setLang={setLang} />
+          <button className="btn-login" style={{
+            padding: "9px 18px", border: "1px solid rgba(255,255,255,0.18)", borderRadius: 8,
+            background: "transparent", color: "#fff", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "inherit",
+          }}>{t.login}</button>
+          <button className="btn-add" style={{
+            padding: "9px 20px", border: "none", borderRadius: 8,
+            background: "linear-gradient(135deg, #e8543e, #c0392b)", color: "#fff",
+            cursor: "pointer", fontSize: 14, fontWeight: 700, fontFamily: "inherit",
+            boxShadow: "0 4px 16px rgba(232,84,62,0.3)",
+          }}>{t.addListing}</button>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function Hero({ t }) {
+  return (
+    <section style={{
+      position: "relative", minHeight: 540, display: "flex", alignItems: "center", justifyContent: "center",
+      background: "linear-gradient(170deg, #0e0e1e 0%, #1a1a3a 40%, #2a1a2a 100%)", overflow: "hidden",
+    }}>
+      <div style={{ position: "absolute", top: -120, right: -100, width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,84,62,0.12) 0%, transparent 70%)" }} />
+      <div style={{ position: "absolute", bottom: -80, left: -60, width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(90,60,180,0.1) 0%, transparent 70%)" }} />
+      <div style={{
+        position: "absolute", inset: 0, opacity: 0.025,
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 30h60M30 0v60' stroke='%23fff' stroke-width='.5'/%3E%3C/svg%3E")`,
+      }} />
+      <div className="fade-up" style={{ textAlign: "center", position: "relative", zIndex: 2, padding: "110px 24px 70px" }}>
+        <h1 style={{
+          fontSize: "clamp(34px, 5vw, 60px)", fontWeight: 800, color: "#fff",
+          fontFamily: "'Playfair Display', serif", lineHeight: 1.1, letterSpacing: "-0.02em",
+        }}>{t.heroTitle}</h1>
+        <p style={{ fontSize: "clamp(15px, 2vw, 19px)", color: "rgba(255,255,255,0.5)", marginTop: 16 }}>{t.heroSub}</p>
+        <div className="hero-stats" style={{ display: "flex", justifyContent: "center", gap: 48, marginTop: 44 }}>
+          {[
+            [t.statsListings, "12,400+"],
+            [t.statsCities, "36"],
+            [t.statsAgents, "580+"],
+            [t.statsUsers, "25,000+"],
+          ].map(([label, val], i) => (
+            <div key={label} style={{ textAlign: "center", animation: `countUp 0.6s ${0.2+i*0.1}s cubic-bezier(.4,0,.2,1) both` }}>
+              <div style={{ fontSize: 30, fontWeight: 800, color: "#e8543e", fontFamily: "'Playfair Display', serif" }}>{val}</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", marginTop: 4 }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SearchBar({ t, filters, setFilters, opTab, setOpTab }) {
+  const tabs = [
+    { key: "buy", label: t.buy },
+    { key: "rent", label: t.rent },
+    { key: "daily", label: t.daily },
+  ];
+  const s = {
+    padding: "11px 14px", borderRadius: 8, border: "1px solid #e0dfe6",
+    fontSize: 14, fontFamily: "inherit", background: "#fff", color: "#1a1a2e",
+    width: "100%", appearance: "none", outline: "none",
+  };
+  return (
+    <div style={{ maxWidth: 1280, margin: "-50px auto 0", padding: "0 24px", position: "relative", zIndex: 10 }}>
+      <div className="scale-in" style={{
+        background: "#fff", borderRadius: 16,
+        boxShadow: "0 20px 60px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.05)",
+        overflow: "hidden",
+      }}>
+        <div style={{ display: "flex", borderBottom: "1px solid #f0eff5" }}>
+          {tabs.map(tb => (
+            <button key={tb.key} onClick={() => setOpTab(tb.key)} style={{
+              flex: 1, padding: "15px 0", border: "none", cursor: "pointer", fontSize: 15, fontWeight: 600,
+              fontFamily: "inherit",
+              background: opTab === tb.key ? "#fff" : "#faf9fe",
+              color: opTab === tb.key ? "#e8543e" : "#999",
+              borderBottom: opTab === tb.key ? "3px solid #e8543e" : "3px solid transparent",
+              transition: "all .2s",
+            }}>{tb.label}</button>
+          ))}
+        </div>
+        <div className="search-filters" style={{ padding: "20px 24px 24px", display: "flex", gap: 12, flexWrap: "wrap", alignItems: "end" }}>
+          <div style={{ flex: "1 1 155px", minWidth: 140 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#aaa", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.city}</label>
+            <select style={s} value={filters.city} onChange={e => setFilters(f => ({...f, city: e.target.value}))}>
+              <option value="">{t.allCities}</option>
+              {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 155px", minWidth: 140 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#aaa", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.type}</label>
+            <select style={s} value={filters.type} onChange={e => setFilters(f => ({...f, type: e.target.value}))}>
+              <option value="">{t.allTypes}</option>
+              {["apartment","house","villa","land","commercial"].map(tp => <option key={tp} value={tp}>{t[tp]}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 115px", minWidth: 100 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#aaa", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.priceFrom}</label>
+            <input style={s} type="number" placeholder="€" value={filters.priceFrom} onChange={e => setFilters(f => ({...f, priceFrom: e.target.value}))} />
+          </div>
+          <div style={{ flex: "1 1 115px", minWidth: 100 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#aaa", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.priceTo}</label>
+            <input style={s} type="number" placeholder="€" value={filters.priceTo} onChange={e => setFilters(f => ({...f, priceTo: e.target.value}))} />
+          </div>
+          <div style={{ flex: "1 1 95px", minWidth: 85 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#aaa", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.rooms}</label>
+            <select style={s} value={filters.rooms} onChange={e => setFilters(f => ({...f, rooms: e.target.value}))}>
+              <option value="">{t.any}</option>
+              {[1,2,3,4,5].map(r => <option key={r} value={r}>{r}+</option>)}
+            </select>
+          </div>
+          <div style={{ flex: "1 1 115px", minWidth: 100 }}>
+            <label style={{ fontSize: 11, fontWeight: 700, color: "#aaa", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>{t.area}</label>
+            <input style={s} type="number" placeholder="m²" value={filters.area} onChange={e => setFilters(f => ({...f, area: e.target.value}))} />
+          </div>
+          <div style={{ display: "flex", gap: 8, paddingTop: 18 }}>
+            <button onClick={() => setFilters({city:"",type:"",priceFrom:"",priceTo:"",rooms:"",area:""})} style={{
+              padding: "11px 18px", borderRadius: 8, border: "1px solid #e0dfe6",
+              background: "#faf9fe", color: "#888", cursor: "pointer", fontSize: 14, fontWeight: 600, fontFamily: "inherit",
+            }}>{t.reset}</button>
+            <button style={{
+              padding: "11px 30px", borderRadius: 8, border: "none",
+              background: "linear-gradient(135deg, #e8543e, #c0392b)", color: "#fff",
+              cursor: "pointer", fontSize: 15, fontWeight: 700, fontFamily: "inherit",
+              boxShadow: "0 4px 16px rgba(232,84,62,0.25)",
+            }}>{t.search}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TagBadge({ tag, t }) {
+  if (!tag) return null;
+  const map = {
+    verified: { bg: "#e6f7ed", color: "#1a8c4e", icon: "✓" },
+    newBuild: { bg: "#e8f0fe", color: "#2a5bd7", icon: "★" },
+    priceReduced: { bg: "#fef3e6", color: "#d4822c", icon: "↓" },
+  };
+  const m = map[tag]; if (!m) return null;
+  return (
+    <span style={{
+      position: "absolute", top: 12, left: 12, padding: "5px 10px", borderRadius: 7,
+      fontSize: 11, fontWeight: 700, background: m.bg, color: m.color, letterSpacing: "0.02em",
+      display: "flex", alignItems: "center", gap: 4,
+    }}>{m.icon} {t[tag]}</span>
+  );
+}
+
+function FavButton() {
+  const [fav, setFav] = useState(false);
+  return (
+    <button onClick={(e) => { e.stopPropagation(); setFav(!fav); }} style={{
+      position: "absolute", top: 12, right: 12, width: 34, height: 34, borderRadius: "50%",
+      border: "none", background: "rgba(255,255,255,0.85)", cursor: "pointer",
+      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
+      backdropFilter: "blur(8px)", transition: "transform .2s",
+      transform: fav ? "scale(1.15)" : "scale(1)",
+    }}>{fav ? "❤️" : "🤍"}</button>
+  );
+}
+
+function PropertyCard({ listing, t, delay }) {
+  const [hov, setHov] = useState(false);
+  const priceSuffix = listing.opType === "rent" ? t.perMonth : listing.opType === "daily" ? t.perDay : "";
+  return (
+    <div
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{
+        borderRadius: 14, overflow: "hidden", background: "#fff",
+        boxShadow: hov ? "0 20px 48px rgba(0,0,0,0.12)" : "0 2px 12px rgba(0,0,0,0.05)",
+        transform: hov ? "translateY(-6px)" : "none",
+        transition: "all .35s cubic-bezier(.4,0,.2,1)",
+        cursor: "pointer", animation: `fadeUp 0.5s ${delay}s cubic-bezier(.4,0,.2,1) both`,
+      }}
+    >
+      <div style={{ position: "relative", paddingTop: "62%", overflow: "hidden" }}>
+        <img src={listing.photo} alt={listing.street} loading="lazy" style={{
+          position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover",
+          transform: hov ? "scale(1.06)" : "scale(1)",
+          transition: "transform .6s cubic-bezier(.4,0,.2,1)",
+        }} />
+        <TagBadge tag={listing.tag} t={t} />
+        <FavButton />
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, height: 90,
+          background: "linear-gradient(transparent, rgba(0,0,0,0.55))",
+        }} />
+        <div style={{ position: "absolute", bottom: 14, left: 16 }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "#fff", fontFamily: "'Playfair Display', serif", textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
+            {listing.currency}{listing.price.toLocaleString()}
+            <span style={{ fontSize: 13, fontWeight: 500, opacity: 0.85 }}>{priceSuffix}</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ padding: "16px 18px 18px" }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#1a1a2e", marginBottom: 3 }}>{t[listing.type]}</div>
+        <div style={{ fontSize: 13, color: "#999", marginBottom: 14 }}>{listing.street}, {listing.city}</div>
+        <div style={{ display: "flex", gap: 14, fontSize: 13, color: "#666" }}>
+          {listing.rooms > 0 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7v11a2 2 0 002 2h14a2 2 0 002-2V7"/><path d="M21 7H3l2-4h14l2 4z"/><path d="M7 20v-4h10v4"/></svg>
+            {listing.rooms} {t.roomsShort}
+          </span>}
+          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 3v18"/></svg>
+            {listing.area} {t.m2}
+          </span>
+          {listing.floor > 0 && <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V2M4 7h16M4 12h16M4 17h16"/></svg>
+            {listing.floor}/{listing.totalFloors}
+          </span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Results({ listings, t }) {
+  if (listings.length === 0) {
+    return <div style={{ textAlign: "center", padding: "60px 24px", color: "#999", fontSize: 16 }}>{t.noResults}</div>;
+  }
+  return (
+    <div className="grid-results" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 24 }}>
+      {listings.map((l, i) => <PropertyCard key={l.id} listing={l} t={t} delay={Math.min(i * 0.06, 0.5)} />)}
+    </div>
+  );
+}
+
+function PopularCities({ t }) {
+  const top6 = CITIES.slice(0, 6);
+  const counts = [1240, 890, 720, 560, 430, 380];
+  return (
+    <section style={{ maxWidth: 1280, margin: "0 auto", padding: "64px 24px" }}>
+      <h2 style={{ fontSize: 28, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Playfair Display', serif", marginBottom: 32 }}>{t.popularCities}</h2>
+      <div className="grid-cities" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+        {top6.map((name, i) => (
+          <div key={name} style={{
+            position: "relative", borderRadius: 14, overflow: "hidden", paddingTop: i < 2 ? "55%" : "65%",
+            cursor: "pointer", gridColumn: i < 2 ? "span 1" : undefined,
+          }}>
+            <img src={CITY_PHOTOS[i]} alt={name} loading="lazy" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", transition: "transform .5s" }} />
+            <div style={{ position: "absolute", inset: 0, background: "linear-gradient(transparent 30%, rgba(0,0,0,0.6))" }} />
+            <div style={{ position: "absolute", bottom: 16, left: 18 }}>
+              <div style={{ color: "#fff", fontSize: 20, fontWeight: 700, fontFamily: "'Playfair Display', serif" }}>{name}</div>
+              <div style={{ color: "rgba(255,255,255,0.65)", fontSize: 13, marginTop: 2 }}>{counts[i]} {t.statsListings.toLowerCase()}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function About({ t }) {
+  const items = [
+    { icon: "✓", title: t.about1title, desc: t.about1desc, color: "#e6f7ed" },
+    { icon: "🗺", title: t.about2title, desc: t.about2desc, color: "#e8f0fe" },
+    { icon: "🌍", title: t.about3title, desc: t.about3desc, color: "#fef3e6" },
+    { icon: "🤝", title: t.about4title, desc: t.about4desc, color: "#f3e8fe" },
+  ];
+  return (
+    <section style={{ background: "linear-gradient(180deg, #f6f5fb, #eeedf5)", padding: "64px 24px" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <h2 style={{ textAlign: "center", fontSize: 28, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Playfair Display', serif", marginBottom: 40 }}>{t.aboutTitle}</h2>
+        <div className="grid-about" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: 20 }}>
+          {items.map((it, i) => (
+            <div key={i} style={{
+              background: "#fff", borderRadius: 14, padding: "28px 24px",
+              boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+              transition: "transform .25s", cursor: "default",
+            }}>
+              <div style={{
+                width: 50, height: 50, borderRadius: 13, background: it.color,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, marginBottom: 16,
+              }}>{it.icon}</div>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "#1a1a2e", marginBottom: 8 }}>{it.title}</div>
+              <div style={{ fontSize: 14, color: "#777", lineHeight: 1.65 }}>{it.desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer({ t }) {
+  return (
+    <footer style={{ background: "#0e0e1e", color: "rgba(255,255,255,0.5)", padding: "48px 24px 32px" }}>
+      <div className="footer-inner" style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 48, justifyContent: "space-between" }}>
+        <div style={{ flex: "1 1 280px" }}>
+          <div style={{ fontSize: 24, fontWeight: 800, color: "#fff", fontFamily: "'Playfair Display', serif", marginBottom: 12 }}>{t.brand}</div>
+          <p style={{ fontSize: 14, lineHeight: 1.7, maxWidth: 320 }}>{t.footerDesc}</p>
+        </div>
+        <div style={{ flex: "1 1 140px" }}>
+          <div style={{ fontWeight: 700, color: "#fff", fontSize: 14, marginBottom: 16 }}>{t.footerNav}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
+            <a href="#">{t.buy}</a><a href="#">{t.rent}</a><a href="#">{t.daily}</a><a href="#">{t.addListing}</a>
+          </div>
+        </div>
+        <div style={{ flex: "1 1 180px" }}>
+          <div style={{ fontWeight: 700, color: "#fff", fontSize: 14, marginBottom: 16 }}>{t.footerContact}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 14 }}>
+            <span>info@shtepi.al</span><span>+355 69 123 4567</span><span>Tiranë, Albania</span>
+          </div>
+        </div>
+      </div>
+      <div style={{ maxWidth: 1280, margin: "32px auto 0", paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.06)", fontSize: 13, textAlign: "center" }}>
+        © 2026 Shtëpi.al — {t.footerRights}
+      </div>
+    </footer>
+  );
+}
+
+// ─── App ──────────────────────────────────────────────────────
+function App() {
+  const [lang, setLang] = useState("uk");
+  const [opTab, setOpTab] = useState("buy");
+  const [filters, setFilters] = useState({ city: "", type: "", priceFrom: "", priceTo: "", rooms: "", area: "" });
+  const t = T[lang];
+
+  const filtered = useMemo(() => ALL_LISTINGS.filter(l => {
+    if (l.opType !== opTab) return false;
+    if (filters.city && l.city !== filters.city) return false;
+    if (filters.type && l.type !== filters.type) return false;
+    if (filters.priceFrom && l.price < Number(filters.priceFrom)) return false;
+    if (filters.priceTo && l.price > Number(filters.priceTo)) return false;
+    if (filters.rooms && l.rooms < Number(filters.rooms)) return false;
+    if (filters.area && l.area < Number(filters.area)) return false;
+    return true;
+  }), [opTab, filters]);
+
+  return (
+    <div>
+      <Header lang={lang} setLang={setLang} t={t} />
+      <Hero t={t} />
+      <SearchBar t={t} filters={filters} setFilters={setFilters} opTab={opTab} setOpTab={setOpTab} />
+      <section style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 24px" }}>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#1a1a2e", fontFamily: "'Playfair Display', serif", marginBottom: 24 }}>
+          {t.results} <span style={{ fontSize: 16, fontWeight: 500, color: "#999" }}>({filtered.length})</span>
+        </h2>
+        <Results listings={filtered} t={t} />
+      </section>
+      <PopularCities t={t} />
+      <About t={t} />
+      <Footer t={t} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
